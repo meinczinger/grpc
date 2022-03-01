@@ -12,6 +12,16 @@ message SumResponse {
   int32 sum = 1;
 }
 
+message FactorizeRequest {
+  int32 number = 1;
+}
+
+message FactorResponse {
+  int32 factor = 1;
+}
+
 service SumService {
   rpc Sum(SumRequest) returns (SumResponse) {};
+
+  rpc Factorize(FactorizeRequest) returns (stream  FactorResponse) {};
 }

@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SumServiceClient interface {
 	Sum(ctx context.Context, in *SumRequest, opts ...grpc.CallOption) (*SumResponse, error)
+	Factorize(ctx context.Context, in *FactorizeRequest, opts ...grpc.CallOption) (SumService_FactorizeClient, error)
 }
 
 type sumServiceClient struct {
@@ -42,11 +43,44 @@ func (c *sumServiceClient) Sum(ctx context.Context, in *SumRequest, opts ...grpc
 	return out, nil
 }
 
+func (c *sumServiceClient) Factorize(ctx context.Context, in *FactorizeRequest, opts ...grpc.CallOption) (SumService_FactorizeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &SumService_ServiceDesc.Streams[0], "/calculator.SumService/Factorize", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &sumServiceFactorizeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type SumService_FactorizeClient interface {
+	Recv() (*FactorResponse, error)
+	grpc.ClientStream
+}
+
+type sumServiceFactorizeClient struct {
+	grpc.ClientStream
+}
+
+func (x *sumServiceFactorizeClient) Recv() (*FactorResponse, error) {
+	m := new(FactorResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // SumServiceServer is the server API for SumService service.
 // All implementations must embed UnimplementedSumServiceServer
 // for forward compatibility
 type SumServiceServer interface {
 	Sum(context.Context, *SumRequest) (*SumResponse, error)
+	Factorize(*FactorizeRequest, SumService_FactorizeServer) error
 	mustEmbedUnimplementedSumServiceServer()
 }
 
@@ -56,6 +90,9 @@ type UnimplementedSumServiceServer struct {
 
 func (UnimplementedSumServiceServer) Sum(context.Context, *SumRequest) (*SumResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Sum not implemented")
+}
+func (UnimplementedSumServiceServer) Factorize(*FactorizeRequest, SumService_FactorizeServer) error {
+	return status.Errorf(codes.Unimplemented, "method Factorize not implemented")
 }
 func (UnimplementedSumServiceServer) mustEmbedUnimplementedSumServiceServer() {}
 
@@ -88,6 +125,27 @@ func _SumService_Sum_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SumService_Factorize_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(FactorizeRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SumServiceServer).Factorize(m, &sumServiceFactorizeServer{stream})
+}
+
+type SumService_FactorizeServer interface {
+	Send(*FactorResponse) error
+	grpc.ServerStream
+}
+
+type sumServiceFactorizeServer struct {
+	grpc.ServerStream
+}
+
+func (x *sumServiceFactorizeServer) Send(m *FactorResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // SumService_ServiceDesc is the grpc.ServiceDesc for SumService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -100,6 +158,12 @@ var SumService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SumService_Sum_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Factorize",
+			Handler:       _SumService_Factorize_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "calculator.proto",
 }

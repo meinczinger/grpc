@@ -18,37 +18,38 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// SumServiceClient is the client API for SumService service.
+// CalculatorServiceClient is the client API for CalculatorService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type SumServiceClient interface {
+type CalculatorServiceClient interface {
 	Sum(ctx context.Context, in *SumRequest, opts ...grpc.CallOption) (*SumResponse, error)
-	Factorize(ctx context.Context, in *FactorizeRequest, opts ...grpc.CallOption) (SumService_FactorizeClient, error)
+	Factorize(ctx context.Context, in *FactorizeRequest, opts ...grpc.CallOption) (CalculatorService_FactorizeClient, error)
+	Average(ctx context.Context, opts ...grpc.CallOption) (CalculatorService_AverageClient, error)
 }
 
-type sumServiceClient struct {
+type calculatorServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewSumServiceClient(cc grpc.ClientConnInterface) SumServiceClient {
-	return &sumServiceClient{cc}
+func NewCalculatorServiceClient(cc grpc.ClientConnInterface) CalculatorServiceClient {
+	return &calculatorServiceClient{cc}
 }
 
-func (c *sumServiceClient) Sum(ctx context.Context, in *SumRequest, opts ...grpc.CallOption) (*SumResponse, error) {
+func (c *calculatorServiceClient) Sum(ctx context.Context, in *SumRequest, opts ...grpc.CallOption) (*SumResponse, error) {
 	out := new(SumResponse)
-	err := c.cc.Invoke(ctx, "/calculator.SumService/Sum", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/calculator.CalculatorService/Sum", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sumServiceClient) Factorize(ctx context.Context, in *FactorizeRequest, opts ...grpc.CallOption) (SumService_FactorizeClient, error) {
-	stream, err := c.cc.NewStream(ctx, &SumService_ServiceDesc.Streams[0], "/calculator.SumService/Factorize", opts...)
+func (c *calculatorServiceClient) Factorize(ctx context.Context, in *FactorizeRequest, opts ...grpc.CallOption) (CalculatorService_FactorizeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CalculatorService_ServiceDesc.Streams[0], "/calculator.CalculatorService/Factorize", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &sumServiceFactorizeClient{stream}
+	x := &calculatorServiceFactorizeClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -58,16 +59,16 @@ func (c *sumServiceClient) Factorize(ctx context.Context, in *FactorizeRequest, 
 	return x, nil
 }
 
-type SumService_FactorizeClient interface {
+type CalculatorService_FactorizeClient interface {
 	Recv() (*FactorResponse, error)
 	grpc.ClientStream
 }
 
-type sumServiceFactorizeClient struct {
+type calculatorServiceFactorizeClient struct {
 	grpc.ClientStream
 }
 
-func (x *sumServiceFactorizeClient) Recv() (*FactorResponse, error) {
+func (x *calculatorServiceFactorizeClient) Recv() (*FactorResponse, error) {
 	m := new(FactorResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -75,94 +76,163 @@ func (x *sumServiceFactorizeClient) Recv() (*FactorResponse, error) {
 	return m, nil
 }
 
-// SumServiceServer is the server API for SumService service.
-// All implementations must embed UnimplementedSumServiceServer
+func (c *calculatorServiceClient) Average(ctx context.Context, opts ...grpc.CallOption) (CalculatorService_AverageClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CalculatorService_ServiceDesc.Streams[1], "/calculator.CalculatorService/Average", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &calculatorServiceAverageClient{stream}
+	return x, nil
+}
+
+type CalculatorService_AverageClient interface {
+	Send(*AverageRequest) error
+	CloseAndRecv() (*AverageResponse, error)
+	grpc.ClientStream
+}
+
+type calculatorServiceAverageClient struct {
+	grpc.ClientStream
+}
+
+func (x *calculatorServiceAverageClient) Send(m *AverageRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *calculatorServiceAverageClient) CloseAndRecv() (*AverageResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(AverageResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// CalculatorServiceServer is the server API for CalculatorService service.
+// All implementations must embed UnimplementedCalculatorServiceServer
 // for forward compatibility
-type SumServiceServer interface {
+type CalculatorServiceServer interface {
 	Sum(context.Context, *SumRequest) (*SumResponse, error)
-	Factorize(*FactorizeRequest, SumService_FactorizeServer) error
-	mustEmbedUnimplementedSumServiceServer()
+	Factorize(*FactorizeRequest, CalculatorService_FactorizeServer) error
+	Average(CalculatorService_AverageServer) error
+	mustEmbedUnimplementedCalculatorServiceServer()
 }
 
-// UnimplementedSumServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedSumServiceServer struct {
+// UnimplementedCalculatorServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedCalculatorServiceServer struct {
 }
 
-func (UnimplementedSumServiceServer) Sum(context.Context, *SumRequest) (*SumResponse, error) {
+func (UnimplementedCalculatorServiceServer) Sum(context.Context, *SumRequest) (*SumResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Sum not implemented")
 }
-func (UnimplementedSumServiceServer) Factorize(*FactorizeRequest, SumService_FactorizeServer) error {
+func (UnimplementedCalculatorServiceServer) Factorize(*FactorizeRequest, CalculatorService_FactorizeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Factorize not implemented")
 }
-func (UnimplementedSumServiceServer) mustEmbedUnimplementedSumServiceServer() {}
+func (UnimplementedCalculatorServiceServer) Average(CalculatorService_AverageServer) error {
+	return status.Errorf(codes.Unimplemented, "method Average not implemented")
+}
+func (UnimplementedCalculatorServiceServer) mustEmbedUnimplementedCalculatorServiceServer() {}
 
-// UnsafeSumServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to SumServiceServer will
+// UnsafeCalculatorServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CalculatorServiceServer will
 // result in compilation errors.
-type UnsafeSumServiceServer interface {
-	mustEmbedUnimplementedSumServiceServer()
+type UnsafeCalculatorServiceServer interface {
+	mustEmbedUnimplementedCalculatorServiceServer()
 }
 
-func RegisterSumServiceServer(s grpc.ServiceRegistrar, srv SumServiceServer) {
-	s.RegisterService(&SumService_ServiceDesc, srv)
+func RegisterCalculatorServiceServer(s grpc.ServiceRegistrar, srv CalculatorServiceServer) {
+	s.RegisterService(&CalculatorService_ServiceDesc, srv)
 }
 
-func _SumService_Sum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _CalculatorService_Sum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SumRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SumServiceServer).Sum(ctx, in)
+		return srv.(CalculatorServiceServer).Sum(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/calculator.SumService/Sum",
+		FullMethod: "/calculator.CalculatorService/Sum",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SumServiceServer).Sum(ctx, req.(*SumRequest))
+		return srv.(CalculatorServiceServer).Sum(ctx, req.(*SumRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SumService_Factorize_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _CalculatorService_Factorize_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(FactorizeRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(SumServiceServer).Factorize(m, &sumServiceFactorizeServer{stream})
+	return srv.(CalculatorServiceServer).Factorize(m, &calculatorServiceFactorizeServer{stream})
 }
 
-type SumService_FactorizeServer interface {
+type CalculatorService_FactorizeServer interface {
 	Send(*FactorResponse) error
 	grpc.ServerStream
 }
 
-type sumServiceFactorizeServer struct {
+type calculatorServiceFactorizeServer struct {
 	grpc.ServerStream
 }
 
-func (x *sumServiceFactorizeServer) Send(m *FactorResponse) error {
+func (x *calculatorServiceFactorizeServer) Send(m *FactorResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-// SumService_ServiceDesc is the grpc.ServiceDesc for SumService service.
+func _CalculatorService_Average_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(CalculatorServiceServer).Average(&calculatorServiceAverageServer{stream})
+}
+
+type CalculatorService_AverageServer interface {
+	SendAndClose(*AverageResponse) error
+	Recv() (*AverageRequest, error)
+	grpc.ServerStream
+}
+
+type calculatorServiceAverageServer struct {
+	grpc.ServerStream
+}
+
+func (x *calculatorServiceAverageServer) SendAndClose(m *AverageResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *calculatorServiceAverageServer) Recv() (*AverageRequest, error) {
+	m := new(AverageRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// CalculatorService_ServiceDesc is the grpc.ServiceDesc for CalculatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var SumService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "calculator.SumService",
-	HandlerType: (*SumServiceServer)(nil),
+var CalculatorService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "calculator.CalculatorService",
+	HandlerType: (*CalculatorServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Sum",
-			Handler:    _SumService_Sum_Handler,
+			Handler:    _CalculatorService_Sum_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Factorize",
-			Handler:       _SumService_Factorize_Handler,
+			Handler:       _CalculatorService_Factorize_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "Average",
+			Handler:       _CalculatorService_Average_Handler,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "calculator.proto",

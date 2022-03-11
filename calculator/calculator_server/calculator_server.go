@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	calculatorpb "grpc_basics/calculator/calculatorpb/go"
+	"io"
 	"log"
 	"net"
 
@@ -11,7 +12,7 @@ import (
 )
 
 type server struct {
-	calculatorpb.UnimplementedSumServiceServer
+	calculatorpb.UnimplementedCalculatorServiceServer
 }
 
 func (*server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calculatorpb.SumResponse, error) {
@@ -28,7 +29,7 @@ func (*server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calculat
 	return res, nil
 }
 
-func (*server) Factorize(req *calculatorpb.FactorizeRequest, stream calculatorpb.SumService_FactorizeServer) error {
+func (*server) Factorize(req *calculatorpb.FactorizeRequest, stream calculatorpb.CalculatorService_FactorizeServer) error {
 	fmt.Printf("Function Factorize has been called with %v", req)
 
 	number := req.GetNumber()
@@ -52,6 +53,30 @@ func (*server) Factorize(req *calculatorpb.FactorizeRequest, stream calculatorpb
 	return nil
 }
 
+func (*server) Average(stream calculatorpb.CalculatorService_AverageServer) error {
+	fmt.Println("Calculating average...")
+
+	var sum int32 = 0
+	count := 0
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&calculatorpb.AverageResponse{
+				Average: float32(sum) / float32(count),
+			})
+		}
+
+		if err != nil {
+			log.Fatalf("Error while reading client stream: %v", err)
+		}
+
+		number := req.GetNumber()
+		sum += number
+		count += 1
+	}
+}
+
 func main() {
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
@@ -59,7 +84,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	calculatorpb.RegisterSumServiceServer(s, &server{})
+	calculatorpb.RegisterCalculatorServiceServer(s, &server{})
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

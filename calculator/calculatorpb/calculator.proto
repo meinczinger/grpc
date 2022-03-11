@@ -20,8 +20,18 @@ message FactorResponse {
   int32 factor = 1;
 }
 
-service SumService {
+message AverageRequest {
+  int32 number = 1;
+}
+
+message AverageResponse {
+  float average = 1;
+}
+
+service CalculatorService {
   rpc Sum(SumRequest) returns (SumResponse) {};
 
   rpc Factorize(FactorizeRequest) returns (stream  FactorResponse) {};
+
+  rpc Average(stream AverageRequest) returns (AverageResponse) {};
 }

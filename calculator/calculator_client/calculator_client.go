@@ -6,6 +6,7 @@ import (
 	calculatorpb "grpc_basics/calculator/calculatorpb/go"
 	"io"
 	"log"
+	"time"
 
 	"google.golang.org/grpc"
 )
@@ -20,14 +21,16 @@ func main() {
 	// Execute at the end
 	defer cc.Close()
 
-	s := calculatorpb.NewSumServiceClient(cc)
+	s := calculatorpb.NewCalculatorServiceClient(cc)
 
 	// doUnary(s)
 
-	doServerStreaming(s)
+	// doServerStreaming(s)
+
+	doClientStreaming(s)
 }
 
-func doUnary(s calculatorpb.SumServiceClient) {
+func doUnary(s calculatorpb.CalculatorServiceClient) {
 	req := &calculatorpb.SumRequest{
 		Num1: 3,
 		Num2: 15,
@@ -40,7 +43,7 @@ func doUnary(s calculatorpb.SumServiceClient) {
 	log.Printf("Response from Greet: %v", res.Sum)
 }
 
-func doServerStreaming(s calculatorpb.SumServiceClient) {
+func doServerStreaming(s calculatorpb.CalculatorServiceClient) {
 	var n int32 = 21012
 	fmt.Printf("Factorizing the number %v ", n)
 	req := &calculatorpb.FactorizeRequest{
@@ -62,4 +65,32 @@ func doServerStreaming(s calculatorpb.SumServiceClient) {
 		}
 		fmt.Printf("Factor received: %v\n", msg.GetFactor())
 	}
+}
+
+func doClientStreaming(s calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Calculating average")
+
+	numbers := []int32{2, 5, 91, 12, 43}
+
+	stream, err := s.Average(context.Background())
+
+	if err != nil {
+		log.Fatalf("Error while calling Average: %v", err)
+	}
+
+	for _, number := range numbers {
+		fmt.Printf("Sending req: %v\n", number)
+		stream.Send(&calculatorpb.AverageRequest{
+			Number: number,
+		})
+		time.Sleep(1000 * time.Millisecond)
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("error while recieving response from Average: %v", err)
+	}
+
+	fmt.Printf("Average: %v \n", res.GetAverage())
+
 }

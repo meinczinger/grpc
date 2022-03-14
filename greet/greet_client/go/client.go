@@ -27,7 +27,8 @@ func main() {
 
 	// doServerStreaming(c)
 
-	doClientStreaming(c)
+	// doClientStreaming(c)
+	doBiDiStreaming(c)
 }
 
 func doUnary(c greetpb.GreetServiceClient) {
@@ -102,4 +103,52 @@ func doClientStreaming(c greetpb.GreetServiceClient) {
 	}
 
 	fmt.Printf("LongGreet Response: %v \n", res)
+}
+
+func doBiDiStreaming(c greetpb.GreetServiceClient) {
+	stream, err := c.GreetEveryone(context.Background())
+	if err != nil {
+		log.Fatalf("Error while creating stream: %v", err)
+		return
+	}
+
+	requests := []string{
+		"Tibor",
+		"Libor",
+		"Vibor",
+	}
+
+	wait_channel := make(chan struct{})
+	go func() {
+		// function to send a bunch of messages
+		for _, name := range requests {
+			fmt.Printf("Sending req: %v\n", name)
+			stream.Send(&greetpb.GreetEveryoneRequest{
+				Greeting: &greetpb.Greeting{
+					FirstName: name,
+				},
+			})
+			time.Sleep(1000 * time.Millisecond)
+		}
+		stream.CloseSend()
+	}()
+
+	go func() {
+		// function to receive a bunch of messages
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("Error while receiving: %v", err)
+				break
+			}
+			fmt.Printf("Received: %v\n", res)
+		}
+		close(wait_channel)
+	}()
+
+	// block until everything is done
+	<-wait_channel
 }
